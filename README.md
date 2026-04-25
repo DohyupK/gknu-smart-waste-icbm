@@ -1,7 +1,6 @@
 # EcoSort-AIoT
 
 YOLOv8 + Raspberry Pi 기반 온디바이스(On-device) 폐기물 자동 분류 시스템  
-Cloud 연동은 제외하고 AIoT 제어에 집중합니다.
 
 ## Project Overview
 
