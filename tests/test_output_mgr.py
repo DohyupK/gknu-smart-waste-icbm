@@ -1,0 +1,180 @@
+from src.models import ClassificationResult, WasteType
+from src.output_mgr import OutputM, OutputManager
+
+
+class StubDisplay:
+    def __init__(self):
+        self.calls = []
+
+    def show_category(self, text):
+        self.calls.append(("show_category", text))
+
+    def show_warning(self, msg):
+        self.calls.append(("show_warning", msg))
+
+
+class StubAudio:
+    def __init__(self):
+        self.calls = []
+
+    def play_tts(self, text):
+        self.calls.append(("play_tts", text))
+
+
+class StubMotor:
+    def __init__(self):
+        self.calls = []
+
+    def rotate_to(self, angle):
+        self.calls.append(("rotate_to", angle))
+
+
+class StubSensor:
+    def __init__(self, full):
+        self.full = full
+
+    def is_full(self):
+        return self.full
+
+
+class StubBluetooth:
+    def __init__(self):
+        self.calls = []
+
+    def send_alert(self, msg):
+        self.calls.append(("send_alert", msg))
+
+
+def test_output_manager_sequence_without_full_bin():
+    output = OutputManager()
+    output.display = StubDisplay()
+    output.audio = StubAudio()
+    output.servo = StubMotor()
+    output.sensor = StubSensor(full=False)
+    output.bluetooth = StubBluetooth()
+
+    output.handle_classification(ClassificationResult(WasteType.CAN, 0.85))
+
+    assert output.display.calls == [("show_category", "Can")]
+    assert output.audio.calls == [("play_tts", "Can")]
+    assert output.servo.calls == [("rotate_to", 90)]
+    assert output.bluetooth.calls == []
+
+
+def test_output_manager_full_bin_branch():
+    output = OutputManager()
+    output.display = StubDisplay()
+    output.audio = StubAudio()
+    output.servo = StubMotor()
+    output.sensor = StubSensor(full=True)
+    output.bluetooth = StubBluetooth()
+
+    output.handle_classification(ClassificationResult(WasteType.PAPER, 0.90))
+
+    assert ("show_category", "Paper") in output.display.calls
+    assert ("show_warning", "분류함이 가득 찼습니다!") in output.display.calls
+    assert output.audio.calls == [("play_tts", "Paper")]
+    assert output.servo.calls == [("rotate_to", 90)]
+    assert output.bluetooth.calls == [("send_alert", "분류함 비움 필요")]
+
+
+def test_outputm_camel_case_path():
+    class CamelDisplay:
+        def __init__(self):
+            self.calls = []
+
+        def showCategory(self, icon, text):
+            self.calls.append(("showCategory", icon, text))
+
+        def showWarning(self, message):
+            self.calls.append(("showWarning", message))
+
+    class CamelAudio:
+        def __init__(self):
+            self.calls = []
+
+        def playTTS(self, text):
+            self.calls.append(("playTTS", text))
+
+    class CamelMotor:
+        def __init__(self):
+            self.calls = []
+
+        def rotateTo(self, angle):
+            self.calls.append(("rotateTo", angle))
+
+    class CamelSensor:
+        def __init__(self, full):
+            self.full = full
+
+        def isFull(self):
+            return self.full
+
+    class CamelBluetooth:
+        def __init__(self):
+            self.calls = []
+
+        def sendAlert(self, message):
+            self.calls.append(("sendAlert", message))
+
+    output = OutputM()
+    output.display = CamelDisplay()
+    output.audio = CamelAudio()
+    output.servo = CamelMotor()
+    output.sensor = CamelSensor(full=True)
+    output.bluetooth = CamelBluetooth()
+
+    output.handleClassification(ClassificationResult(WasteType.GLASS, 0.95))
+
+    assert output.display.calls[0] == ("showCategory", "Glass", "Glass")
+    assert ("showWarning", "분류함이 가득 찼습니다!") in output.display.calls
+    assert output.audio.calls == [("playTTS", "Glass")]
+    assert output.servo.calls == [("rotateTo", 90)]
+    assert output.bluetooth.calls == [("sendAlert", "분류함 비움 필요")]
+
+
+def test_output_manager_is_compat_alias():
+    output = OutputManager()
+    assert isinstance(output, OutputM)
+
+
+def test_outputm_routes_device_exception_to_handle_exception():
+    class SafeDisplay:
+        def __init__(self):
+            self.calls = []
+
+        def showCategory(self, icon, text):
+            self.calls.append(("showCategory", icon, text))
+
+        def showWarning(self, message):
+            self.calls.append(("showWarning", message))
+
+    class SafeAudio:
+        def __init__(self):
+            self.calls = []
+
+        def playTTS(self, text):
+            self.calls.append(("playTTS", text))
+
+        def playEffect(self, sound_type):
+            self.calls.append(("playEffect", sound_type.value))
+
+    class BrokenMotor:
+        def rotateTo(self, _angle):
+            raise RuntimeError("servo failed")
+
+    class NotFullSensor:
+        def isFull(self):
+            return False
+
+    output = OutputM()
+    output.display = SafeDisplay()
+    output.audio = SafeAudio()
+    output.servo = BrokenMotor()
+    output.sensor = NotFullSensor()
+
+    output.handleClassification(ClassificationResult(WasteType.CAN, 0.92))
+
+    assert ("showCategory", "Can", "Can") in output.display.calls
+    assert ("showWarning", "출력 장치 처리 중 예외가 발생했습니다.") in output.display.calls
+    assert ("playEffect", "warning") in output.audio.calls
