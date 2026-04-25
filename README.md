@@ -4,7 +4,7 @@ YOLOv8 + Raspberry Pi 기반 온디바이스(On-device) 폐기물 자동 분류 
 
 ## Project Overview
 
-- Raspberry Pi 4에서 YOLOv8 Nano로 폐기물을 온디바이스 분류합니다.
+- Raspberry Pi 4에서 YOLO로 폐기물을 온디바이스 분류합니다.
 - 분류 결과를 Servo Motors 제어로 연결해 자동 분류 동작을 수행합니다.
 
 ## Key Features
