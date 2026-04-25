@@ -19,6 +19,10 @@ Cloud 연동은 제외하고 AIoT 제어에 집중합니다.
 - AI: YOLOv8 Nano (Optimized for Edge)
 - Mobile: Local Network/Bluetooth 알림 채널
 
+## Class Diagram
+
+![EcoSort Class Diagram](docs/images/class-diagram.png)
+
 ## Setup
 
 ```bash
