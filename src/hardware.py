@@ -1,5 +1,8 @@
 from enum import Enum
+from gpiozero import DistanceSensor
+from gpiozero.pins.lgpio import LGPIOFactory
 
+factory = LGPIOFactory()
 
 class SoundType(Enum):
     SUCCESS = "success"
@@ -67,18 +70,25 @@ class MotorC:
 
 
 class SensorC:
-    def __init__(self, fillThreshold=0.8):
-        self.fillThreshold = fillThreshold
+    def __init__(self, trig=23, echo=25, height_dist=720):
+        self.sensor = DistanceSensor(echo=echo, trigger=trig, pin_factory=factory)
+        self.empty_bin_dist = height_dist / 10.0
+        self.fillThreshold = 0.8
 
     def checkFillLevel(self):
-        analog = self.readAnalogValue()
-        return max(0.0, min(1.0, analog / 1023.0))
+        current_dist = self.sensor.distance * 100
+        filled_height = self.empty_bin_dist - current_dist
+        fill_ratio = filled_height / self.empty_bin_dist
+        return max(0.0, min(1.0, fill_ratio))
 
     def isFull(self):
         return self.checkFillLevel() >= self.fillThreshold
 
     def readAnalogValue(self):
-        return 0
+        current_dist = self.sensor.distance * 100
+        if current_dist > self.empty_bin_dist:
+            current_dist = self.empty_bin_dist
+        return (current_dist / self.empty_bin_dist) * 100
 
     def is_full(self):
         return self.isFull()
