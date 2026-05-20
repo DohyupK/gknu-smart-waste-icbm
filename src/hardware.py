@@ -1,5 +1,11 @@
 from enum import Enum
-
+from mobile.ble_notifier import BleNotifier, MockBleNotifier
+import os
+try:
+    import pygame
+    AUDIO_AVAILABLE = True
+except (ImportError, RuntimeError):
+    AUDIO_AVAILABLE = False
 
 class SoundType(Enum):
     SUCCESS = "success"
@@ -31,19 +37,35 @@ class DisplayC:
 class AudioC:
     def __init__(self):
         self.volume = 5
+        self.category = {
+            "페트병":"플라스틱", "플라스틱":"플라스틱",
+            "종이":"일반", "스티로폼":"일반", "비닐":"일반",
+            "금속캔":"캔", "건전지":"캔",
+            "유리병":"유리", "형광등":"유리"
+        }
 
     def playTTS(self, koreanText):
-        print(f"[Audio] '이것은 {koreanText}입니다' 재생")
+        os.system(f"espeak -v ko '이것은 {koreanText}입니다'")
 
     def playEffect(self, soundType: SoundType):
         print(f"[Audio] 효과음 재생: {soundType.value}")
+        path = self.loadAudioFile("/home/trash/Downloads/YCOIN.mp3")
+        try:
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play()
+        except Exception as e:
+            print(f"효과음 재생 실패: {e}")
 
     def loadAudioFile(self, path):
         print(f"[Audio] 오디오 파일 로드 시도: {path}")
-        return bool(path)
+        return path
 
     def play_tts(self, text):
-        self.playTTS(text)
+        text = text.strip()
+        textSound = self.category.get(text)
+        
+        self.playEffect(SoundType.SUCCESS)
+        self.playTTS(textSound)
 
 
 class MotorC:
@@ -85,21 +107,30 @@ class SensorC:
 
 
 class BluetoothC:
-    def __init__(self):
+    def __init__(self, notifier: BleNotifier | None = None):
         self.isConnected = False
+        self.notifier = notifier or MockBleNotifier()
 
     def connect(self):
         self.isConnected = True
-        print("[Bluetooth] 연결 완료")
         return self.isConnected
 
-    def sendAlert(self, message):
+    def _notify_event(self, event, message):
         if not self.isConnected:
             self.connect()
-        print(f"[Bluetooth] 스마트폰 앱으로 알림 전송: {message}")
+        return self.notifier.notify(event, message)
+
+    def sendAlert(self, message):
+        return self._notify_event("BIN_FULL", message)
+
+    def sendExceptionAlert(self, message):
+        return self._notify_event("OUTPUT_EXCEPTION", message)
 
     def send_alert(self, msg):
-        self.sendAlert(msg)
+        return self.sendAlert(msg)
+
+    def send_exception_alert(self, msg):
+        return self.sendExceptionAlert(msg)
 
 
 class MobileApp:
