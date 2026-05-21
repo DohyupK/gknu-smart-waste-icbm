@@ -1,11 +1,7 @@
 from enum import Enum
 from mobile.ble_notifier import BleNotifier, MockBleNotifier
-import os
-try:
-    import pygame
-    AUDIO_AVAILABLE = True
-except (ImportError, RuntimeError):
-    AUDIO_AVAILABLE = False
+import pygame
+import subprocess
 
 class SoundType(Enum):
     SUCCESS = "success"
@@ -45,16 +41,13 @@ class AudioC:
         }
 
     def playTTS(self, koreanText):
-        os.system(f"espeak -v ko '이것은 {koreanText}입니다'")
+        subprocess.Popen(["espeak", "-v", "ko", f"이것은 {koreanText}입니다"])
 
     def playEffect(self, soundType: SoundType):
         print(f"[Audio] 효과음 재생: {soundType.value}")
         path = self.loadAudioFile("/home/trash/Downloads/YCOIN.mp3")
-        try:
-            pygame.mixer.music.load(path)
-            pygame.mixer.music.play()
-        except Exception as e:
-            print(f"효과음 재생 실패: {e}")
+        sound = pygame.mixer.Sound(path)
+        sound.play()
 
     def loadAudioFile(self, path):
         print(f"[Audio] 오디오 파일 로드 시도: {path}")
