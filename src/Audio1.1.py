@@ -87,6 +87,12 @@ from gpiozero.pins.lgpio import LGPIOFactory
 
 factory = LGPIOFactory()
 
+from enum import Enum
+from gpiozero import DistanceSensor
+from gpiozero.pins.lgpio import LGPIOFactory
+
+factory = LGPIOFactory()
+
 class SensorC:
     def __init__(self, sensor_num, height_dist=720):
         self.sensor = []
@@ -102,18 +108,21 @@ class SensorC:
             self.sensor.append(s)
 						
     def checkFillLevel(self):
-        current_dist = self.sensor.distance * 100
-        filled_height = self.empty_bin_dist - current_dist
-        fill_ratio = filled_height / self.empty_bin_dist
-        return max(0.0, min(1.0, fill_ratio))
+        fill_ratios = []
+        for s in self.sensor:
+            current_dist = s.distance * 100
+            filled_height = self.empty_bin_dist - current_dist
+            fill_ratio = filled_height / self.empty_bin_dist
+            fill_ratios.append(max(0.0, min(1.0, fill_ratio)))
+        return fill_ratios
 
     def isFull(self):
-        return self.checkFillLevel() >= self.fillThreshold
+        return [level >= self.fillThreshold for level in self.checkFillLevel()]
 
     def readAnalogValue(self):
         analog_values = []
-        for sensor in self.sensor:
-            current_dist = sensor.distance * 100
+        for s in self.sensor:
+            current_dist = s.distance * 100
             if current_dist > self.empty_bin_dist:
                 current_dist = self.empty_bin_dist
             analog_values.append((current_dist / self.empty_bin_dist) * 100)
