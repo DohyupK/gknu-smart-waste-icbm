@@ -81,19 +81,43 @@ class MotorC:
         self.rotateTo(angle)
 
 
-class SensorC:
-    def __init__(self, fillThreshold=0.8):
-        self.fillThreshold = fillThreshold
+from enum import Enum
+from gpiozero import DistanceSensor
+from gpiozero.pins.lgpio import LGPIOFactory
 
+factory = LGPIOFactory()
+
+class SensorC:
+    def __init__(self, sensor_num, height_dist=720):
+        self.sensor = []
+        self.empty_bin_dist = height_dist / 10.0
+        self.fillThreshold = 0.8
+        
+        for config in sensor_num:
+            s = DistanceSensor(
+                echo=config["echo"],
+                trigger=config["trig"],
+                pin_factory=factory
+            )
+            self.sensor.append(s)
+						
     def checkFillLevel(self):
-        analog = self.readAnalogValue()
-        return max(0.0, min(1.0, analog / 1023.0))
+        current_dist = self.sensor.distance * 100
+        filled_height = self.empty_bin_dist - current_dist
+        fill_ratio = filled_height / self.empty_bin_dist
+        return max(0.0, min(1.0, fill_ratio))
 
     def isFull(self):
         return self.checkFillLevel() >= self.fillThreshold
 
     def readAnalogValue(self):
-        return 0
+        analog_values = []
+        for sensor in self.sensor:
+            current_dist = sensor.distance * 100
+            if current_dist > self.empty_bin_dist:
+                current_dist = self.empty_bin_dist
+            analog_values.append((current_dist / self.empty_bin_dist) * 100)
+        return analog_values
 
     def is_full(self):
         return self.isFull()
